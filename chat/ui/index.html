@@ -484,7 +484,7 @@ async function saveSettings() {
 }
 
 // ── Init greeting ─────────────────────────────────────────────────────
-window.addEventListener('pywebviewready', () => {
+window.addEventListener('pywebviewready', async () => {
   addBubble(
     '你好！我是 AI 助手 😊\n'
     + '• 说「启动灵巧手」初始化设备\n'
@@ -492,6 +492,17 @@ window.addEventListener('pywebviewready', () => {
     + '• 说「关闭灵巧手」断开设备',
     false
   );
+
+  // 检查配置是否完整
+  const r = await window.pywebview.api.check_config();
+  if (r.missing.length > 0) {
+    const labels = { api_key: 'API Key', base_url: 'Base URL', model: '模型' };
+    const names  = r.missing.map(k => labels[k] || k).join('、');
+    addBubble(
+      `⚠️ 检测到以下配置未填写：${names}\n请点击右上角「设置」完成配置后再使用。`,
+      false
+    );
+  }
 });
 </script>
 </body>

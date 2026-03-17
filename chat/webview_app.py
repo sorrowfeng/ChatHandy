@@ -59,6 +59,12 @@ class Api:
     def get_settings(self) -> dict:
         return cfg_mod.load()
 
+    def check_config(self) -> dict:
+        """返回缺失的必填项列表，供 JS 启动时提示。"""
+        cfg = cfg_mod.load()
+        missing = [f for f in ("api_key", "base_url", "model") if not cfg.get(f, "").strip()]
+        return {"missing": missing}
+
     def save_settings(self, cfg: dict) -> bool:
         cfg_mod.save(cfg)
         self.handler = ChatHandler()
