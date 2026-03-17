@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-_CONFIG_PATH = Path(__file__).parent.parent / "config.json"
+# 打包后 exe 所在目录；源码运行时为项目根目录
+if getattr(sys, "frozen", False):
+    _ROOT = Path(sys.executable).parent
+else:
+    _ROOT = Path(__file__).parent.parent
+
+_CONFIG_PATH = _ROOT / "config.json"
 
 DEFAULT_GESTURES: list[dict] = [
     {"name": "张开/伸直",       "positions": [0,    0,     0,     0,     0,     0    ]},
