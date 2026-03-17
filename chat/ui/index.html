@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ChatHandy</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #F0F2F5;
+  --surface:    #FFFFFF;
+  --accent:     #1D6BE8;
+  --accent-dk:  #1558C0;
+  --text:       #1A1A1A;
+  --muted:      #666;
+  --border:     #E5E6EB;
+  --sent-bg:    #1D6BE8;
+  --sent-fg:    #FFF;
+  --recv-bg:    #FFF;
+  --recv-fg:    #1A1A1A;
+  --time-fg:    #AAA;
+}
+
+body {
+  font-family: 'Segoe UI Emoji', 'Microsoft YaHei UI', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+#header {
+  background: var(--surface);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.avatar {
+  width: 40px; height: 40px;
+  background: var(--accent);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 13px;
+  flex-shrink: 0;
+}
+.hdr-info { flex: 1; line-height: 1.3; }
+.hdr-name { font-weight: 700; font-size: 14px; }
+#status { font-size: 11px; color: #07C160; }
+.hdr-right { display: flex; align-items: center; gap: 6px; }
+#hand-dot {
+  font-size: 10px; color: #CCC;
+  white-space: nowrap;
+}
+#hand-dot.on { color: #07C160; }
+.hdr-btn {
+  background: var(--bg); border: none; border-radius: 8px;
+  padding: 5px 10px; font-size: 11px; color: var(--muted);
+  cursor: pointer; font-family: inherit;
+}
+.hdr-btn:hover { background: #e0e2e5; }
+
+/* ── Messages ────────────────────────────────────────────── */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0 10px;
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+}
+#messages::-webkit-scrollbar { width: 4px; }
+#messages::-webkit-scrollbar-thumb { background: #D0D0D0; border-radius: 2px; }
+
+.date-div {
+  text-align: center;
+  color: #BBB;
+  font-size: 10px;
+  padding: 6px 0 4px;
+}
+
+.row {
+  display: flex;
+  padding: 3px 14px;
+}
+.row.sent { justify-content: flex-end; }
+.row.recv { justify-content: flex-start; }
+
+.col {
+  display: flex;
+  flex-direction: column;
+  max-width: 68%;
+}
+.row.sent .col { align-items: flex-end; }
+.row.recv .col { align-items: flex-start; }
+
+.bubble {
+  border-radius: 16px;
+  padding: 8px 12px;
+  line-height: 1.55;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-size: 13px;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+.row.sent .bubble {
+  background: var(--sent-bg);
+  color: var(--sent-fg);
+}
+.row.recv .bubble {
+  background: var(--recv-bg);
+  color: var(--recv-fg);
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+.ts {
+  font-size: 10px;
+  color: var(--time-fg);
+  margin-top: 2px;
+  padding: 0 2px;
+}
+
+/* ── Typing ──────────────────────────────────────────────── */
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px;
+}
+.typing-dots span {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #C0C0C0;
+  animation: bup 1.1s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay: .18s; }
+.typing-dots span:nth-child(3) { animation-delay: .36s; }
+@keyframes bup {
+  0%,60%,100% { transform: translateY(0); opacity:.6; }
+  30%          { transform: translateY(-6px); opacity:1; }
+}
+
+/* ── Input ───────────────────────────────────────────────── */
+#input-wrap {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+#ibox {
+  flex: 1;
+  border: none; outline: none;
+  background: #F5F6F8;
+  border-radius: 12px;
+  padding: 9px 13px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  max-height: 90px;
+  line-height: 1.4;
+  color: var(--text);
+  -webkit-user-select: text;
+  user-select: text;
+  overflow-y: auto;
+}
+#ibox::-webkit-scrollbar { width: 3px; }
+#ibox::-webkit-scrollbar-thumb { background: #CCC; border-radius: 2px; }
+#send {
+  background: var(--accent);
+  color: #fff; border: none;
+  border-radius: 12px;
+  padding: 9px 18px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+  height: 38px; flex-shrink: 0;
+  transition: background .15s;
+}
+#send:hover:not(:disabled) { background: var(--accent-dk); }
+#send:disabled { background: #B0B8C1; cursor: default; }
+
+/* ── Settings Modal ──────────────────────────────────────── */
+#overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.38);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#overlay.open { display: flex; }
+#sbox {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 24px;
+  width: 340px;
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+#sbox h2 { font-size: 15px; margin-bottom: 14px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.field input, .field textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  background: #FAFAFA;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); }
+.field textarea { resize: vertical; min-height: 72px; }
+.field-row { display: flex; gap: 6px; }
+.field-row input { flex: 1; }
+.eye {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.sbtn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.btn-cancel {
+  background: var(--bg); border: none; border-radius: 8px;
+  padding: 7px 16px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.btn-cancel:hover { background: #e0e2e5; }
+.btn-save {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 7px 16px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.btn-save:hover { background: var(--accent-dk); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div class="avatar">AI</div>
+  <div class="hdr-info">
+    <div class="hdr-name">AI 助手</div>
+    <div id="status">● 在线</div>
+  </div>
+  <div class="hdr-right">
+    <div id="hand-dot">⚙ 灵巧手</div>
+    <button class="hdr-btn" onclick="openSettings()">设置</button>
+    <button class="hdr-btn" onclick="clearChat()">清空</button>
+  </div>
+</div>
+
+<!-- Messages -->
+<div id="messages">
+  <div class="date-div" id="date-div"></div>
+</div>
+
+<!-- Input -->
+<div id="input-wrap">
+  <textarea id="ibox" rows="1" placeholder="输入消息，Enter 发送…"></textarea>
+  <button id="send" onclick="sendMsg()">发送</button>
+</div>
+
+<!-- Settings Modal -->
+<div id="overlay" onclick="overlayClick(event)">
+  <div id="sbox">
+    <h2>⚙ 设置</h2>
+    <div class="field">
+      <label>API Key</label>
+      <div class="field-row">
+        <input type="password" id="s-key" autocomplete="off" />
+        <button class="eye" onclick="toggleEye()">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Base URL</label>
+      <input type="text" id="s-url" />
+    </div>
+    <div class="field">
+      <label>模型</label>
+      <input type="text" id="s-model" />
+    </div>
+    <div class="field">
+      <label>System Prompt</label>
+      <textarea id="s-sys" rows="7"></textarea>
+    </div>
+    <div class="sbtn-row">
+      <button class="btn-cancel" onclick="closeSettings()">取消</button>
+      <button class="btn-save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Utils ─────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const msgs = $('messages');
+
+function nowStr() {
+  return new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+}
+
+function initDateDiv() {
+  const d = new Date();
+  const s = `${d.getFullYear()}年${String(d.getMonth()+1).padStart(2,'0')}月`
+           + `${String(d.getDate()).padStart(2,'0')}日  ${nowStr()}`;
+  $('date-div').textContent = s;
+}
+initDateDiv();
+
+function scrollBottom() {
+  setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 40);
+}
+
+// ── Bubbles ───────────────────────────────────────────────────────────
+function addBubble(text, sent) {
+  const row = document.createElement('div');
+  row.className = 'row ' + (sent ? 'sent' : 'recv');
+
+  const col = document.createElement('div');
+  col.className = 'col';
+
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.textContent = text;
+
+  const ts = document.createElement('div');
+  ts.className = 'ts';
+  ts.textContent = nowStr();
+
+  col.appendChild(bub);
+  col.appendChild(ts);
+  row.appendChild(col);
+  msgs.appendChild(row);
+  scrollBottom();
+}
+
+let _typingRow = null;
+function showTyping() {
+  const row = document.createElement('div');
+  row.className = 'row recv';
+  const col = document.createElement('div');
+  col.className = 'col';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.style.padding = '0';
+  bub.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  col.appendChild(bub);
+  row.appendChild(col);
+  msgs.appendChild(row);
+  _typingRow = row;
+  scrollBottom();
+}
+function hideTyping() {
+  if (_typingRow) { _typingRow.remove(); _typingRow = null; }
+}
+
+// ── Status helpers ────────────────────────────────────────────────────
+function setStatus(text, color) {
+  $('status').textContent = text;
+  $('status').style.color = color;
+}
+function setHand(running) {
+  const el = $('hand-dot');
+  el.textContent = running ? '⚙ 灵巧手 ●' : '⚙ 灵巧手';
+  el.className   = running ? 'on' : '';
+}
+
+// ── Send ──────────────────────────────────────────────────────────────
+let busy = false;
+
+async function sendMsg() {
+  const box  = $('ibox');
+  const text = box.value.trim();
+  if (!text || busy) return;
+
+  box.value = '';
+  autoResize();
+  setBusy(true);
+  addBubble(text, true);
+  showTyping();
+  setStatus('● 正在回复…', '#FF9500');
+
+  try {
+    const r = await window.pywebview.api.send_message(text);
+    hideTyping();
+    addBubble(r.reply, false);
+
+    if (r.intent === 'start_hand') {
+      setStatus('● 初始化中…', '#9B59B6');
+      return;   // setBusy called by onHandResult
+    }
+    if (typeof r.hand_running === 'boolean') setHand(r.hand_running);
+    setBusy(false);
+  } catch (e) {
+    hideTyping();
+    addBubble(`[错误] ${e}`, false);
+    setBusy(false);
+  }
+}
+
+// Called from Python for each step of a gesture sequence
+function onGestureStep(r) {
+  const icon = r.ok ? '✅' : '⚠️';
+  const info = r.ok ? '' : ` (${r.msg})`;
+  addBubble(`${icon} ${r.index}/${r.total}  ${r.name}${info}`, false);
+}
+
+// Called from Python after hand init completes
+function onHandResult(r) {
+  addBubble(r.text, false);
+  setHand(r.running);
+  setBusy(false);
+}
+
+function setBusy(b) {
+  busy = b;
+  $('send').disabled = b;
+  if (!b) setStatus('● 在线', '#07C160');
+}
+
+// ── Input auto-resize ─────────────────────────────────────────────────
+const ibox = $('ibox');
+function autoResize() {
+  ibox.style.height = 'auto';
+  ibox.style.height = Math.min(ibox.scrollHeight, 90) + 'px';
+}
+ibox.addEventListener('input', autoResize);
+ibox.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+
+// ── Clear ─────────────────────────────────────────────────────────────
+async function clearChat() {
+  await window.pywebview.api.clear_chat();
+  [...msgs.children].forEach(c => { if (c.id !== 'date-div') c.remove(); });
+  initDateDiv();
+  addBubble('对话已清空，有什么可以帮你的吗？😊', false);
+}
+
+// ── Settings ──────────────────────────────────────────────────────────
+async function openSettings() {
+  const cfg = await window.pywebview.api.get_settings();
+  $('s-key').value   = cfg.api_key       || '';
+  $('s-url').value   = cfg.base_url      || '';
+  $('s-model').value = cfg.model         || '';
+  $('s-sys').value   = cfg.system_prompt || '';
+  $('overlay').classList.add('open');
+}
+function closeSettings() { $('overlay').classList.remove('open'); }
+function overlayClick(e) { if (e.target === $('overlay')) closeSettings(); }
+function toggleEye() {
+  const el = $('s-key');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+async function saveSettings() {
+  await window.pywebview.api.save_settings({
+    api_key:       $('s-key').value.trim(),
+    base_url:      $('s-url').value.trim(),
+    model:         $('s-model').value.trim(),
+    system_prompt: $('s-sys').value,
+  });
+  closeSettings();
+  addBubble('设置已保存，配置已生效 ✅', false);
+}
+
+// ── Init greeting ─────────────────────────────────────────────────────
+window.addEventListener('pywebviewready', () => {
+  addBubble(
+    '你好！我是 AI 助手 😊\n'
+    + '• 说「启动灵巧手」初始化设备\n'
+    + '• 说「做个握拳手势」控制手部动作\n'
+    + '• 说「关闭灵巧手」断开设备',
+    false
+  );
+});
+</script>
+</body>
+</html>
