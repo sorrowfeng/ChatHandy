@@ -66,6 +66,11 @@ class Api:
         return {"missing": missing}
 
     def save_settings(self, cfg: dict) -> bool:
+        # 若 system_prompt 为空或手势列表有变化，自动重新生成
+        if not cfg.get("system_prompt", "").strip():
+            cfg["system_prompt"] = cfg_mod.build_system_prompt(
+                cfg.get("gestures", cfg_mod.DEFAULT_GESTURES)
+            )
         cfg_mod.save(cfg)
         self.handler = ChatHandler()
         return True

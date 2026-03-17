@@ -206,12 +206,26 @@ body {
   background: #fff;
   border-radius: 16px;
   padding: 22px 24px;
-  width: 340px;
-  max-height: 82vh;
-  overflow-y: auto;
+  width: 420px;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 8px 32px rgba(0,0,0,.18);
 }
-#sbox h2 { font-size: 15px; margin-bottom: 14px; }
+#sbox h2 { font-size: 15px; margin-bottom: 12px; flex-shrink: 0; }
+
+/* tabs */
+.stabs { display: flex; gap: 4px; margin-bottom: 14px; flex-shrink: 0; }
+.stab {
+  padding: 5px 14px; border-radius: 8px; font-size: 12px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; font-family: inherit; color: var(--muted);
+}
+.stab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.stab-panel { display: none; flex: 1; overflow-y: auto; }
+.stab-panel.active { display: block; }
+
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 .field input, .field textarea {
@@ -238,7 +252,44 @@ body {
   cursor: pointer;
   font-size: 13px;
 }
-.sbtn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+/* gesture table */
+.g-hint { font-size: 10px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+.g-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.g-table th {
+  text-align: left; font-size: 10px; color: var(--muted);
+  border-bottom: 1px solid var(--border); padding: 4px 4px 6px;
+}
+.g-table td { padding: 5px 4px; vertical-align: middle; }
+.g-table tr:not(:last-child) td { border-bottom: 1px solid #F0F0F0; }
+.g-name {
+  width: 100%; border: 1px solid transparent; border-radius: 6px;
+  padding: 3px 6px; font-size: 11px; font-family: inherit;
+  background: transparent; outline: none; -webkit-user-select: text; user-select: text;
+}
+.g-name:focus { border-color: var(--accent); background: #FAFAFA; }
+.g-pos {
+  width: 100%; border: 1px solid transparent; border-radius: 6px;
+  padding: 3px 6px; font-size: 10px; font-family: monospace;
+  background: transparent; outline: none; color: #555;
+  -webkit-user-select: text; user-select: text;
+}
+.g-pos:focus { border-color: var(--accent); background: #FAFAFA; }
+.g-del {
+  background: none; border: none; cursor: pointer;
+  color: #CCC; font-size: 14px; padding: 2px 4px;
+  border-radius: 4px; line-height: 1;
+}
+.g-del:hover { color: #E74C3C; background: #FFF0F0; }
+.g-add {
+  margin-top: 8px; width: 100%;
+  background: var(--bg); border: 1px dashed var(--border);
+  border-radius: 8px; padding: 6px; font-size: 12px;
+  cursor: pointer; font-family: inherit; color: var(--muted);
+}
+.g-add:hover { border-color: var(--accent); color: var(--accent); }
+
+.sbtn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-shrink: 0; }
 .btn-cancel {
   background: var(--bg); border: none; border-radius: 8px;
   padding: 7px 16px; font-size: 12px; cursor: pointer; font-family: inherit;
@@ -284,25 +335,58 @@ body {
 <div id="overlay" onclick="overlayClick(event)">
   <div id="sbox">
     <h2>⚙ 设置</h2>
-    <div class="field">
-      <label>API Key</label>
-      <div class="field-row">
-        <input type="password" id="s-key" autocomplete="off" />
-        <button class="eye" onclick="toggleEye()">👁</button>
+    <div class="stabs">
+      <button class="stab active" onclick="switchTab('api')">API 配置</button>
+      <button class="stab" onclick="switchTab('gesture')">手势库</button>
+      <button class="stab" onclick="switchTab('prompt')">Prompt</button>
+    </div>
+
+    <!-- Tab: API -->
+    <div id="tab-api" class="stab-panel active">
+      <div class="field">
+        <label>API Key</label>
+        <div class="field-row">
+          <input type="password" id="s-key" autocomplete="off" />
+          <button class="eye" onclick="toggleEye()">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Base URL</label>
+        <input type="text" id="s-url" />
+      </div>
+      <div class="field">
+        <label>模型</label>
+        <input type="text" id="s-model" />
       </div>
     </div>
-    <div class="field">
-      <label>Base URL</label>
-      <input type="text" id="s-url" />
+
+    <!-- Tab: 手势库 -->
+    <div id="tab-gesture" class="stab-panel">
+      <p class="g-hint">
+        positions 为 6 个整数（0–10000）：<br>
+        [大拇指侧摆, 大拇指弯曲, 食指, 中指, 无名指, 小拇指]
+      </p>
+      <table class="g-table">
+        <thead>
+          <tr>
+            <th style="width:34%">手势名称</th>
+            <th>positions</th>
+            <th style="width:24px"></th>
+          </tr>
+        </thead>
+        <tbody id="g-body"></tbody>
+      </table>
+      <button class="g-add" onclick="addGestureRow()">＋ 添加手势</button>
     </div>
-    <div class="field">
-      <label>模型</label>
-      <input type="text" id="s-model" />
+
+    <!-- Tab: Prompt -->
+    <div id="tab-prompt" class="stab-panel">
+      <div class="field">
+        <label>System Prompt（留空则根据手势库自动生成）</label>
+        <textarea id="s-sys" rows="12"></textarea>
+      </div>
     </div>
-    <div class="field">
-      <label>System Prompt</label>
-      <textarea id="s-sys" rows="7"></textarea>
-    </div>
+
     <div class="sbtn-row">
       <button class="btn-cancel" onclick="closeSettings()">取消</button>
       <button class="btn-save" onclick="saveSettings()">保存</button>
@@ -458,12 +542,24 @@ async function clearChat() {
 }
 
 // ── Settings ──────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.stab').forEach((b, i) => {
+    const names = ['api', 'gesture', 'prompt'];
+    b.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.stab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
 async function openSettings() {
   const cfg = await window.pywebview.api.get_settings();
   $('s-key').value   = cfg.api_key       || '';
   $('s-url').value   = cfg.base_url      || '';
   $('s-model').value = cfg.model         || '';
   $('s-sys').value   = cfg.system_prompt || '';
+  renderGestures(cfg.gestures || []);
+  switchTab('api');
   $('overlay').classList.add('open');
 }
 function closeSettings() { $('overlay').classList.remove('open'); }
@@ -472,11 +568,46 @@ function toggleEye() {
   const el = $('s-key');
   el.type = el.type === 'password' ? 'text' : 'password';
 }
+
+// ── Gesture table ─────────────────────────────────────────
+function renderGestures(gestures) {
+  $('g-body').innerHTML = '';
+  gestures.forEach(g => addGestureRow(g.name, g.positions));
+}
+
+function addGestureRow(name = '', positions = [0,0,0,0,0,0]) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input class="g-name" value="${escHtml(name)}" placeholder="手势名称" /></td>
+    <td><input class="g-pos"  value="${positions.join(', ')}" placeholder="0, 0, 0, 0, 0, 0" /></td>
+    <td><button class="g-del" onclick="this.closest('tr').remove()">✕</button></td>
+  `;
+  $('g-body').appendChild(tr);
+}
+
+function readGestures() {
+  return [...$('g-body').querySelectorAll('tr')].map(tr => {
+    const name = tr.querySelector('.g-name').value.trim();
+    const positions = tr.querySelector('.g-pos').value
+      .split(/[,\s]+/).map(v => {
+        const n = parseInt(v, 10);
+        return isNaN(n) ? 0 : Math.max(0, Math.min(10000, n));
+      }).slice(0, 6);
+    while (positions.length < 6) positions.push(0);
+    return { name, positions };
+  }).filter(g => g.name);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
 async function saveSettings() {
   await window.pywebview.api.save_settings({
     api_key:       $('s-key').value.trim(),
     base_url:      $('s-url').value.trim(),
     model:         $('s-model').value.trim(),
+    gestures:      readGestures(),
     system_prompt: $('s-sys').value,
   });
   closeSettings();
