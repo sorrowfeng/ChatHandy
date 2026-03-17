@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -9,10 +11,29 @@ import threading
 import time
 from pathlib import Path
 
-_ROOT = Path(__file__).parent.parent
+
+def _app_root() -> Path:
+    """返回应用根目录：打包后为 _internal（_MEIPASS），源码时为项目根目录。"""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
+    return Path(__file__).parent.parent
 
 
 def _python_exe() -> Path:
+    """找可用的 python.exe：打包后从系统 PATH 查找，源码时用当前解释器。"""
+    if getattr(sys, "frozen", False):
+        # 打包后 sys.executable 是 ChatHandy.exe，需要找系统 Python
+        found = shutil.which("python") or shutil.which("python3")
+        if found:
+            return Path(found)
+        # 回退：尝试 exe 同级目录有没有 python.exe（便携版 Python）
+        candidate = Path(sys.executable).parent / "python.exe"
+        if candidate.exists():
+            return candidate
+        raise RuntimeError(
+            "未找到 Python 解释器，请确认系统已安装 Python 并加入 PATH。"
+        )
+    # 源码运行：用当前解释器，pythonw → python
     exe = Path(sys.executable)
     candidate = exe.parent / "python.exe"
     return candidate if candidate.exists() else exe
@@ -26,7 +47,7 @@ def _free_port() -> int:
 
 
 class CommandRunner:
-    _SERVER = _ROOT / "hand" / "server.py"
+    _SERVER = _app_root() / "hand" / "server.py"
 
     def __init__(self) -> None:
         self._proc: subprocess.Popen | None = None
