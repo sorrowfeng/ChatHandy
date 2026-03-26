@@ -102,6 +102,8 @@ class Api:
                     w.evaluate_js(f"onGestureStep({payload})")
                 except Exception:
                     pass
+            from chat import lan_server as _ls
+            _ls.push_to_lan_clients(f"onGestureStep({payload})")
             if ok and i < total - 1:
                 time.sleep(1.5)   # 等待当前手势运动完成后再执行下一个
 
@@ -121,3 +123,5 @@ class Api:
                 w.evaluate_js(f"onHandResult({payload})")
             except Exception:
                 pass
+        from chat import lan_server as _ls
+        _ls.push_to_lan_clients(f"onHandResult({payload})")

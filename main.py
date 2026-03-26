@@ -4,10 +4,12 @@ from pathlib import Path
 import webview
 
 from chat.webview_app import Api
+from chat.lan_server import start_server
 
 
 def main() -> None:
     api = Api()
+    start_server(api)
     webview.create_window(
         title="ChatHandy",
         url=str(Path(__file__).parent / "chat" / "ui" / "index.html"),

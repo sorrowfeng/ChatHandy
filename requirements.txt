@@ -1,2 +1,4 @@
 anthropic>=0.85.0
 pywebview>=6.1
+flask>=3.0
+flask-sock>=0.7

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ChatHandy</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +28,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   font-size: 13px;
   color: var(--text);
@@ -179,6 +181,27 @@ body {
 }
 #ibox::-webkit-scrollbar { width: 3px; }
 #ibox::-webkit-scrollbar-thumb { background: #CCC; border-radius: 2px; }
+#mic {
+  background: #F5F6F8;
+  color: var(--muted); border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: 38px; height: 38px;
+  font-size: 16px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+#mic:hover { background: #e0e2e5; color: var(--text); }
+#mic.recording {
+  background: #FFE0E0;
+  color: #E74C3C;
+  animation: mic-pulse 1s infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231,76,60,.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(231,76,60,0); }
+}
 #send {
   background: var(--accent);
   color: #fff; border: none;
@@ -328,6 +351,7 @@ body {
 <!-- Input -->
 <div id="input-wrap">
   <textarea id="ibox" rows="1" placeholder="输入消息，Enter 发送…"></textarea>
+  <button id="mic" title="语音输入" onclick="toggleMic()">🎤</button>
   <button id="send" onclick="sendMsg()">发送</button>
 </div>
 
@@ -613,6 +637,92 @@ async function saveSettings() {
   closeSettings();
   addBubble('设置已保存，配置已生效 ✅', false);
 }
+
+// ── Voice Input ───────────────────────────────────────────────────────
+(function initMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    // 浏览器不支持，隐藏麦克风按钮
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = $('mic');
+      if (btn) btn.style.display = 'none';
+    });
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = 'zh-CN';
+  rec.interimResults = false;
+  rec.continuous = false;
+
+  let isRecording = false;
+
+  window.toggleMic = function() {
+    if (isRecording) {
+      rec.stop();
+    } else {
+      try {
+        rec.start();
+      } catch (e) {
+        // 如果已经在运行，忽略错误
+      }
+    }
+  };
+
+  rec.onstart = function() {
+    isRecording = true;
+    $('mic').classList.add('recording');
+    $('mic').title = '点击停止录音';
+  };
+
+  rec.onend = function() {
+    isRecording = false;
+    $('mic').classList.remove('recording');
+    $('mic').title = '语音输入';
+  };
+
+  rec.onresult = function(e) {
+    const transcript = e.results[0][0].transcript;
+    const box = $('ibox');
+    // 追加到已有内容后
+    box.value = box.value ? box.value + transcript : transcript;
+    autoResize();
+    box.focus();
+  };
+
+  rec.onerror = function(e) {
+    isRecording = false;
+    $('mic').classList.remove('recording');
+    $('mic').title = '语音输入';
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    const errMap = {
+      'not-allowed': '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风',
+      'audio-capture': '未检测到麦克风设备',
+      'network': '语音识别需要网络连接',
+    };
+    addBubble(`[语音识别] ${errMap[e.error] || e.error}`, false);
+  };
+})();
+
+// ── Mobile keyboard fix ───────────────────────────────────────────────
+if (window.visualViewport) {
+  function onViewportResize() {
+    document.body.style.height = window.visualViewport.height + 'px';
+    scrollBottom();
+  }
+  window.visualViewport.addEventListener('resize', onViewportResize);
+  window.visualViewport.addEventListener('scroll', onViewportResize);
+}
+
+// Prevent Safari from scrolling the page when the keyboard appears
+ibox.addEventListener('focus', function () {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+});
+ibox.addEventListener('blur', function () {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+});
 
 // ── Init greeting ─────────────────────────────────────────────────────
 window.addEventListener('pywebviewready', async () => {
